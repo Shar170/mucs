@@ -87,7 +87,7 @@ def init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, array_A, L, z1, z2,
         array_A[r] = 0 if r < Barrier_A else We * L/L0
 
 
-def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None ):
+def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None ):
 
     prog_bar = st.progress(0, 'Прогресс расчёта')    
 
@@ -141,9 +141,11 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
         K_vol = pow(4.0, 1.0/3.0)
     prog_bar.progress(15, 'Инициализация исходных данных')
 
-    for r in range(Nr):
-        f[0][r] = f_start(r,delta_r,r_min,r0,averStartSize)
-        prog_bar.progress(r/Nr, 'Инициализация исходных данных, стартовое распределение')
+    if f is None:
+        f = []
+        for r in range(Nr):
+            f[0][r] = f_start(r,delta_r,r_min,r0,averStartSize)
+            prog_bar.progress(r/Nr, 'Инициализация исходных данных, стартовое распределение')
     start_time = time.time()
 
     array_B = np.apply_along_axis(lambda ij: B(ij[0], ij[1],delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
