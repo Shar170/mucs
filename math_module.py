@@ -48,7 +48,7 @@ def getEps(z1,z2):
 
 
 
-def B(i, k, P, delta_r,r_min):
+def B(i, k, delta_r,r_min, P=1.0):
     '''
     i - дочерний
     k - родительский
@@ -87,7 +87,7 @@ def init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, array_A, L, z1, z2,
         array_A[r] = 0 if r < Barrier_A else We * L/L0
 
 
-def run_calculation(z1 = 3.0 , d_sphere = 5, averStartSize = 23.7, alter_eps_function = None ):
+def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None ):
 
     prog_bar = st.progress(0, 'Прогресс расчёта')    
 
@@ -101,11 +101,7 @@ def run_calculation(z1 = 3.0 , d_sphere = 5, averStartSize = 23.7, alter_eps_fun
     r_max = 50*pow(10, -6) # максимальный радиус частицы
     r0 = r_max # средний радиус частицы
     ps = 2320.0 # плотность порошка (кг/м^3)
-    #m_sphere = 80 * (3.0 / 6.0) # масса мелющих тел (кг)
-    #m_poroh = 80 * (1.0 / 6.0) # масса порошка (кг)
 
-    #d_sphere = 5*(10**(-3)) # размер мелющих тел (м)
-    #z1 = (m_sphere / m_poroh)       # отношение масс мелющих тел к порошку
     z2 = (10.0**-3) / (d_sphere*(10**(-3)))          # отнесённая к 1 миллиметру размер мелющих шаров (метр)
 
     delta_r = (r_max/r0 - r_min/r0) / Nr # шаг по радиусу
@@ -115,13 +111,13 @@ def run_calculation(z1 = 3.0 , d_sphere = 5, averStartSize = 23.7, alter_eps_fun
 
     # a0 = -93279971, a1 = -6658820, a2 = 783271474, a12 = 191562000
     gammaBabk = 1.2
-    P = 0.16
+    P = 0.0256
     K_vol = pow(3.0, 1.0/3.0)
     A0 = 1 / t0
     Barrier_A = 50
     Num_T = 8
     
-    L =  7.72  #феноменологический коэфф.  пропорционален эффективности дробления
+    L =  6.25#7.72  #феноменологический коэфф.  пропорционален эффективности дробления
 
     
     # Инициализация массивов
@@ -138,10 +134,10 @@ def run_calculation(z1 = 3.0 , d_sphere = 5, averStartSize = 23.7, alter_eps_fun
 
     init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, array_A, L, z1, z2, alter_eps_function)
     if d_sphere >= 5:
-        P = 0.16
+        P = 0.0256
         K_vol = pow(3.0, 1.0/3.0)
     if d_sphere <= 2:
-        P = 0.18
+        P = 0.0289
         K_vol = pow(4.0, 1.0/3.0)
     prog_bar.progress(15, 'Инициализация исходных данных')
 
@@ -150,12 +146,7 @@ def run_calculation(z1 = 3.0 , d_sphere = 5, averStartSize = 23.7, alter_eps_fun
         prog_bar.progress(r/Nr, 'Инициализация исходных данных, стартовое распределение')
     start_time = time.time()
 
-    #array_B = np.zeros((Nr, Nr))
-    #for k in range(Nr):
-    #    for i in range(Nr):
-    #        array_B[i][k] = B(i, k, P, delta_r,r_min)
-    #array_B = np.fromfunction(lambda i_, k_: B(i_, k_, P, delta_r,r_min), (Nr, Nr),dtype=int)
-    array_B = np.apply_along_axis(lambda ij: B(ij[0], ij[1], P, delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
+    array_B = np.apply_along_axis(lambda ij: B(ij[0], ij[1],delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
 
     output = []
     s = datetime.datetime.now()
@@ -190,12 +181,10 @@ def run_calculation(z1 = 3.0 , d_sphere = 5, averStartSize = 23.7, alter_eps_fun
                 'time' : t*delta_t*t0/60,
                 'mean': diam_temp,
                 'sizes': [r_array,list(f[t+1])]
-                #pd.DataFrame({'r':pd.Series(arr2[0]), 'f':pd.Series(arr2[1])})
             }
         output.append(
             stat_element
         )
-        #print(stat_element)
         f_time = datetime.datetime.now()
         time_predict = int((old_time + (f_time-s).total_seconds())/2*(Nt - t))
         prog_bar.progress(t/(Nt-1), f'Прогресс расчёта, осталось {time_predict} секунд')

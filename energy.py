@@ -142,7 +142,7 @@ def show_menu():
                 # Plot also the training points
                 colors = "bry"
                 
-                plt.scatter(trn['r_shar'], trn['m_shar'], cmap=plt.cm.Paired)#, c=colors[0], cmap=plt.cm.Paired)
+                plt.scatter(trn['r_shar'], trn['m_shar'], c=colors[0], cmap=plt.cm.Paired)#, cmap=plt.cm.Paired)
 
                 st.pyplot(fig2) 
 

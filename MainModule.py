@@ -28,8 +28,8 @@ if material == 'Al₂O₃':
     densParticle = 4000
     #-densBalls
     densBalls = 5680
-    L = 2.63708
-    P = 1.43682
+    L = 3.72# 2.63708
+    P = 0.17# 1.43682
 else:
     typeMill = 1
     #-oborot
@@ -78,6 +78,7 @@ def runCalc(_densBalls = densBalls, _massRatio = MassRate,_sizeBall=BallSize,_de
         st.warning('Используется модель по умолчанию')
     else:
         st.success('Используется модель ' + str(best_model))
+
     outData = mm.run_calculation(MassRate,BallSize, avStSize, best_model)
     return outData #pd.DataFrame(outData['stats'])
         
@@ -116,7 +117,7 @@ else:
                 
         #st.write('Среднее: ', resData[resData['mean'] <= mean ]['mean'].iloc[0],'<=>', np.average(arr2[0], weights = arr2[1]))
 #         nbins= f_particles.shape[0]+1
-        fig2 = px.line(f_particles, x= 'r', y='f')#, log_x=True)
+        fig2 = px.line(f_particles, x= 'r', y='f', log_x=True)
         fig2 = fig2.update_layout(title='Дифференциальное распределение частиц по размерам',xaxis_title='Размер фракции частиц(диаметры), мкм',yaxis_title='Доля фракции, %')
         st.plotly_chart(fig2)
         
