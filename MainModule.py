@@ -95,7 +95,7 @@ else:
 
     if bt :
 
-        resData = pd.DataFrame(runCalc(avStSize)['stats'])
+        resData = pd.DataFrame(runCalc()['stats'])
         resData.to_csv('resData.csv', index=False)
         #resData = pd.read_csv('resData.csv')
         #
