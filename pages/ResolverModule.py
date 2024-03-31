@@ -2,6 +2,9 @@ import streamlit as st
 import math_module as mm
 import pandas as pd
 from scipy.optimize import minimize
+from datetime import datetime
+
+prog_bar = None
 
 def mse(LP):
     L, P = LP
@@ -15,11 +18,12 @@ def mse(LP):
     errors = []
 
     for s in samples:
-        resData = pd.DataFrame(mm.run_calculation(s[0], s[1], 23.7, None, P=P, L=L)['stats'])
+        resData = pd.DataFrame(mm.run_calculation(s[0], s[1], 23.7, None, P=P, L=L, prog_bar=prog_bar)['stats'])
         minimum = resData['mean'].min()
         errors.append((minimum - s[2]) ** 2)
-
-    return sum(errors) / len(samples)
+    result = sum(errors) / len(samples)
+    st.write(f"MSE: `{result}` L:`{L}` P:`{P}` ")
+    return result
 
 def find_P(params):
     L, P = params
@@ -31,11 +35,15 @@ def FindP():
     initial_guess = [7.06981, 0.1]  # Initial guess for L and P
     bounds = [(0, None), (0, None)]  # Bounds for L and P, L >= 0, P >= 0
     result = minimize(mse, initial_guess, bounds=bounds)
-    optimized_L, optimized_P = result.x
-    re = find_P([optimized_L, optimized_P])
-    st.json(re)
+    st.write(f"L:`{result[0]}` P:`{result[1]}` ")
 
 go = st.button("Начать подбор!")
 
+
+
 if go:
+    prog_bar = st.progress(0, 'Прогресс расчёта') 
+    st.write(f'Время начала расчёта {datetime.now()}')
     FindP()
+    st.write(f'Время окончания расчёта {datetime.now()}')
+

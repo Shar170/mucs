@@ -58,7 +58,27 @@ def B(i, k, delta_r,r_min, P=1.0):
     _B = ((30.0 / (Vk)) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk)* (1.0 - Vi / Vk)) if Vk>Vi else 0
     return P*_B
 
+def beta(vj, vi):
+    #vi is parent
+    #vj is children
+    fbv = vi/vj
+    c= 3.0
+    m = 0.1
+    #sigma = vi/(c*m)
+    first = c*m * math.exp((-(fbv - 0.5)**2)  * ((c*m)**2)/2) / math.sqrt(2*math.pi)
+    return first
 
+def alterB(i, k, delta_r,r_min, P=1.0):
+    '''
+    i - дочерний
+    k - родительский
+    '''
+    Vk = V(k,delta_r,r_min)
+    Vi = V(i,delta_r,r_min)
+    return beta(Vi, Vk)
+    
+
+    
 
 def SumInegral(f, t, r , array_A , array_B, delta_r):
     Nr = len(f[t])
@@ -87,9 +107,9 @@ def init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, array_A, L, z1, z2,
         array_A[r] = 0 if r < Barrier_A else We * L/L0
 
 
-def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4):
-
-    prog_bar = st.progress(0, 'Прогресс расчёта')    
+def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4, prog_bar = None  ):
+    if prog_bar is None:
+        prog_bar = st.progress(0, 'Прогресс расчёта')    
 
     # Константы
     Nr = 3*pow(10, 3) # количество отрезков разбиения
@@ -148,7 +168,7 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
             prog_bar.progress(r/Nr, 'Инициализация исходных данных, стартовое распределение')
     start_time = time.time()
 
-    array_B = np.apply_along_axis(lambda ij: B(ij[0], ij[1],delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
+    array_B = np.apply_along_axis(lambda ij: alterB(ij[0], ij[1],delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
 
     output = []
     s = datetime.datetime.now()
