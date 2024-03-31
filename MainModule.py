@@ -28,7 +28,7 @@ if material == 'Al₂O₃':
     densParticle = 4000
     #-densBalls
     densBalls = 5680
-    L = 3.72# 2.63708
+    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=6.4)
     P = 0.17# 1.43682
 else:
     typeMill = 1
@@ -94,12 +94,19 @@ else:
         best_model = st.selectbox('Модель',  models,  index=2, format_func=lambda m : "аналитическая регрессия" if m is None else m.named_steps['model'].__class__.__name__)
 
     if bt :
-
+        
         resData = pd.DataFrame(runCalc()['stats'])
         resData.to_csv('resData.csv', index=False)
-        #resData = pd.read_csv('resData.csv')
-        #
-        st.write('Желаемый размер достигается на ' + str(round(resData[resData['mean'] <= averageSize]['time'].iloc[0])) + ' минуте')
+        
+        _, col, _ = st.columns([1,1,1])
+        with col:
+            st.write('Распределение частиц по размерам:')
+            st.table(resData[['time', 'mean']])
+
+
+        target_time = resData[resData['mean'] <= averageSize]['time'].iloc[0]
+
+        st.write('Желаемый размер достигается на ' + str(round(target_time)) + ' минуте')
         
         fig = px.line(pd.DataFrame(resData), x='time', y='mean',line_shape="spline")
         fig = fig.update_layout(title='Кинетика процесса измельчения',xaxis_title='время, мин',yaxis_title='размер частиц, мкм')
@@ -124,10 +131,7 @@ else:
         fig3 = px.line(f_particles, x= 'r', y='cum_f')
         fig3 = fig3.update_layout(title='Интегральное распределение частиц по размерам',xaxis_title='Размер фракции частиц(диаметры), мкм',yaxis_title='Доля фракции, %')
         st.plotly_chart(fig3)
-        _, col, _ = st.columns([1,1,1])
-        with col:
-            st.write('Распределение частиц по размерам:')
-            st.table(resData[['time', 'mean']])
+        
         #st.dataframe(resData)
 with st.expander('Справка'):
     """

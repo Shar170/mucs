@@ -87,7 +87,7 @@ def init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, array_A, L, z1, z2,
         array_A[r] = 0 if r < Barrier_A else We * L/L0
 
 
-def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None ):
+def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4):
 
     prog_bar = st.progress(0, 'Прогресс расчёта')    
 
@@ -97,6 +97,7 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
     t0 = 3600 # размер временного шага
     T_max = 1.5*60 * 60 / t0
     delta_t = T_max/Nt# временной шаг
+    #Nt = Nt + 500 #добавляю дополнительные шаги по времени, с сохранением шага и нормировки (убрать из продакшена)
     r_min = 0.0001*pow(10, -6) # минимальный радиус частицы
     r_max = 50*pow(10, -6) # максимальный радиус частицы
     r0 = r_max # средний радиус частицы
@@ -111,18 +112,17 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
 
     # a0 = -93279971, a1 = -6658820, a2 = 783271474, a12 = 191562000
     gammaBabk = 1.2
-    P = 0.0256
+    #P = 0.0256
     K_vol = pow(3.0, 1.0/3.0)
     A0 = 1 / t0
     Barrier_A = 50
     Num_T = 8
     
-    L =  6.4#7.72  #феноменологический коэфф.  пропорционален эффективности дробления
+    #L = 6.4  #феноменологический коэфф.  пропорционален эффективности дробления
 
     
     # Инициализация массивов
     array_A = np.zeros(Nr)
-    f = np.zeros((Nt, Nr))
     f_half = np.zeros(Nr)
 
 
@@ -133,16 +133,16 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
     r_min /= r0
 
     init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, array_A, L, z1, z2, alter_eps_function)
-    if d_sphere >= 5:
-        P = 0.0256
-        K_vol = pow(3.0, 1.0/3.0)
-    if d_sphere <= 2:
-        P = 0.0289
-        K_vol = pow(4.0, 1.0/3.0)
+    #if d_sphere >= 5:
+    #    P = 0.0256
+    #    K_vol = pow(3.0, 1.0/3.0)
+    #if d_sphere <= 2:
+    #    P = 0.0289
+    #    K_vol = pow(4.0, 1.0/3.0)
     prog_bar.progress(15, 'Инициализация исходных данных')
 
     if f is None:
-        f = []
+        f = np.zeros((Nt, Nr))
         for r in range(Nr):
             f[0][r] = f_start(r,delta_r,r_min,r0,averStartSize)
             prog_bar.progress(r/Nr, 'Инициализация исходных данных, стартовое распределение')

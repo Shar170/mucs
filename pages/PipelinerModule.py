@@ -1,4 +1,5 @@
 import streamlit as st
+import energy
 
 settings = []
 #создаёт блок с настройками
@@ -7,8 +8,13 @@ def create_block(id,place=st, _settings= settings):
     block.write("Укажите базовые натройки блока")
     param1 = block.slider("Настройка 1",key=str(id)+"param1")
     param2 = block.radio("Настройка 2", ('Al₂O₃', 'SiC'),key=str(id)+"param2")
+    model = None
+    if len(energy.models) > 0:
+        models = [None]
+        models.extend(energy.models)
+        model = block.selectbox('Модель',  models,  index=2, format_func=lambda m : "аналитическая регрессия" if m is None else m.named_steps['model'].__class__.__name__ ,key=str(id)+"model")
 
-    block_settings = {'param1':param1, 'param2':param2}
+    block_settings = {'param1':param1, 'param2':param2, 'model':model}
     settings[id] = block_settings
     return settings
 
