@@ -28,8 +28,8 @@ if material == 'Al₂O₃':
     densParticle = 4000
     #-densBalls
     densBalls = 5680
-    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=6.4)
-    P = 0.17# 1.43682
+    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=141.85138065317878)
+    P = st.sidebar.number_input("Коэффициент дочерних частиц", min_value=0.0, value=2.3587454416787965)#0.17# 1.43682
 else:
     typeMill = 1
     #-oborot
@@ -79,7 +79,7 @@ def runCalc(_densBalls = densBalls, _massRatio = MassRate,_sizeBall=BallSize,_de
     else:
         st.success('Используется модель ' + str(best_model))
 
-    outData = mm.run_calculation(MassRate,BallSize, avStSize, best_model)
+    outData = mm.run_calculation(MassRate,BallSize, avStSize, best_model, L=_L, P=_P)
     return outData #pd.DataFrame(outData['stats'])
         
             
@@ -101,7 +101,7 @@ else:
         _, col, _ = st.columns([1,1,1])
         with col:
             st.write('Распределение частиц по размерам:')
-            st.table(resData[['time', 'mean']])
+            st.table(resData[['time', 'mean', 'mass']])
 
 
         target_time = resData[resData['mean'] <= averageSize]['time'].iloc[0]
@@ -110,8 +110,6 @@ else:
         
         fig = px.line(pd.DataFrame(resData), x='time', y='mean',line_shape="spline")
         fig = fig.update_layout(title='Кинетика процесса измельчения',xaxis_title='время, мин',yaxis_title='размер частиц, мкм')
-        
-
         st.plotly_chart(fig)
         
         arr2 = resData[resData['mean'] <= averageSize ]['sizes'].iloc[0]
@@ -131,6 +129,10 @@ else:
         fig3 = px.line(f_particles, x= 'r', y='cum_f')
         fig3 = fig3.update_layout(title='Интегральное распределение частиц по размерам',xaxis_title='Размер фракции частиц(диаметры), мкм',yaxis_title='Доля фракции, %')
         st.plotly_chart(fig3)
+
+        fig4 = px.line(pd.DataFrame(resData), x='time', y='mass',line_shape="spline")
+        fig4 = fig4.update_layout(title='Масса частиц во времени',xaxis_title='время, мин',yaxis_title='масса, г')
+        st.plotly_chart(fig4)
         
         #st.dataframe(resData)
 with st.expander('Справка'):

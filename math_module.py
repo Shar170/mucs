@@ -76,9 +76,7 @@ def alterB(i, k, delta_r,r_min, P=1.0):
     Vk = V(k,delta_r,r_min)
     Vi = V(i,delta_r,r_min)
     return beta(Vi, Vk)
-    
 
-    
 
 def SumInegral(f, t, r , array_A , array_B, delta_r):
     Nr = len(f[t])
@@ -106,6 +104,11 @@ def init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, array_A, L, z1, z2,
         #print(We)
         array_A[r] = 0 if r < Barrier_A else We * L/L0
 
+def mass_of_all_particle(f, t, ps, f0, V0, delta_r, Nr, r_min):
+    Volume = 0
+    for r in range(Nr-1):
+        Volume += (V0 * V(r, delta_r, r_min) * f[t][r] * f0 + V0 * V(r+1, delta_r, r_min) * f[t][r+1] * f0) * delta_r / 2.0
+    return ps * Volume
 
 def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4, prog_bar = None  ):
     if prog_bar is None:
@@ -124,7 +127,8 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
     ps = 2320.0 # плотность порошка (кг/м^3)
 
     z2 = (10.0**-3) / (d_sphere*(10**(-3)))          # отнесённая к 1 миллиметру размер мелющих шаров (метр)
-
+    f0 = (2.7*pow(10,7)/(r0))
+    V0 = ((4.0 / 3.0)*  3.141596 * pow(r0, 3.0)); 
     delta_r = (r_max/r0 - r_min/r0) / Nr # шаг по радиусу
     size_search = 2.043*pow(10, -6)/(r0*2) # искомый размер частиц
 
@@ -178,19 +182,19 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
         s = datetime.datetime.now()
         if t == 2:
             startSize = RadiusMean(f, t,delta_r, r_min)
-
-        if d_sphere >= 5:
-            if t == 0:
-                K_vol = pow(3.0, 1.0/3.0)
-            if t == 40:
-                K_vol = pow(4.0, 1.0/3.0)
-        if d_sphere <= 2:
-            if t == 0:
-                K_vol = pow(4.0, 1.0/3.0)
-            if t == 27:
-                K_vol = pow(5.0, 1.0/3.0)
-            if t == 45:
-                K_vol = pow(6.0, 1.0/3.0)
+        K_vol = 1.0
+        # if d_sphere >= 5:
+        #     if t == 0:
+        #         K_vol = pow(3.0, 1.0/3.0)
+        #     if t == 40:
+        #         K_vol = pow(4.0, 1.0/3.0)
+        # if d_sphere <= 2:
+        #     if t == 0:
+        #         K_vol = pow(4.0, 1.0/3.0)
+        #     if t == 27:
+        #         K_vol = pow(5.0, 1.0/3.0)
+        #     if t == 45:
+        #         K_vol = pow(6.0, 1.0/3.0)
 
         for r in range(Nr-1):
             r_integral = analog_f((delta_r*r+r_min)*K_vol,Nr,delta_r,r_min)
@@ -202,7 +206,8 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
         stat_element = {
                 'time' : t*delta_t*t0/60,
                 'mean': diam_temp,
-                'sizes': [r_array,list(f[t+1])]
+                'sizes': [r_array,list(f[t+1])],
+                'mass': mass_of_all_particle(f,t,ps, f0, V0, delta_r, Nr, r_min)
             }
         output.append(
             stat_element
