@@ -49,9 +49,11 @@ def B_simple(i, k, delta_r,r_min, P=1.0):
     return parent_size/daughter_size
 
 
-def beta(vj, vi):
+def beta(i, k, delta_r,r_min, P=1.0):
     #vi is parent
     #vj is children
+    vi = V(i,delta_r,r_min)
+    vj = V(k,delta_r,r_min)
     fbv = vi/vj
     c= 3.0
     m = 0.0013

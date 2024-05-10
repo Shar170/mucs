@@ -47,13 +47,17 @@ def getEps(z1,z2):
     return _eps
 
 
-def alterB(i, k, delta_r,r_min, P=1.0):
+def alterB(i, k, delta_r,r_min, P=1.0, B_function = None):
     '''
     i - дочерний
     k - родительский
     '''
     import daughter_distr as dd #импорт модуля дочерних распределений
-
+    if B_function is not None:
+        return B_function(i, k, delta_r,r_min, P)
+    else:
+        return dd.B(i, k, delta_r,r_min, P) #L = 3.85  P=2.35
+    
     return dd.B_linear(i, k, delta_r,r_min, P)
 
     return dd.B_gamma(i, k, delta_r,r_min, P)
@@ -62,7 +66,6 @@ def alterB(i, k, delta_r,r_min, P=1.0):
 
     return dd.B_log_normal(i, k, delta_r,r_min, P)
 
-    return dd.B(i, k, delta_r,r_min, P) #L = 3.85  P=2.35
 
     return dd.beta(V(i,delta_r,r_min), V(k,delta_r,r_min)) #L = 296.91  P=1.21
 
@@ -129,7 +132,7 @@ def mass_of_all_particle(f, t, ps, f0, V0, delta_r, Nr, r_min):
         Volume += (V0 * V(r, delta_r, r_min) * f[t][r] * f0 + V0 * V(r+1, delta_r, r_min) * f[t][r+1] * f0) * delta_r / 2.0
     return ps * Volume
 
-def get_array_B():
+def get_array_B(B_function = None):
     r_min = 0.0000001*pow(10, -6) # минимальный радиус частицы
     r_max = 50*pow(10, -6) # максимальный радиус частицы
     r0 = r_max # средний радиус частицы
@@ -139,7 +142,7 @@ def get_array_B():
 
     Nr = 3*pow(10, 3) # количество отрезков разбиения
     delta_r = (r_max - r_min) / Nr # шаг по радиусу
-    return np.apply_along_axis(lambda ij: alterB(ij[0], ij[1],delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
+    return np.apply_along_axis(lambda ij: alterB(ij[0], ij[1],delta_r, r_min, B_function = B_function), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
 
 
 def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4, prog_bar = None, array_B = None):

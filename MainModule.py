@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 import math_module as mm
-
+from daughter_distr import daughter_distributions
 html_theme = "sphinx_rtd_theme"
 
 st.set_page_config(layout='wide')
@@ -28,8 +28,22 @@ if material == 'Al₂O₃':
     densParticle = 4000
     #-densBalls
     densBalls = 5680
-    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=296.9088149987542)
-    P = st.sidebar.number_input("Коэффициент дочерних частиц", min_value=0.0, value=1.212685710159255)#0.17# 1.43682
+
+
+
+    daughter_distribution_key = st.sidebar.selectbox("Распределение дочерних элементов", daughter_distributions.keys())
+    recomendations = {
+    'Линейное распределение': [5.0, 1.0], 
+    'Гамма-распределение':  [5.0, 1.0], 
+    'Нормальное распределение':  [5.0, 1.0], 
+    'Лог-нормальное распределение':  [5.0, 1.0], 
+    'Упрощённое распределение':  [5.0, 1.0],
+    'Бета-распределение': [296.91, 1.21],
+    'Легаси распределение': [3.85, 2.35]
+    }
+
+    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=recomendations[daughter_distribution_key ][0])
+    P = st.sidebar.number_input("Коэффициент дочерних частиц", min_value=0.0, value=recomendations[daughter_distribution_key ][1])#0.17# 1.43682
 else:
     typeMill = 1
     #-oborot
@@ -79,7 +93,9 @@ def runCalc(_densBalls = densBalls, _massRatio = MassRate,_sizeBall=BallSize,_de
     else:
         st.success('Используется модель ' + str(best_model))
 
-    outData = mm.run_calculation(MassRate,BallSize, avStSize, best_model, L=_L, P=_P)
+    array_B = mm.get_array_B(B_function=daughter_distributions[daughter_distribution_key])
+
+    outData = mm.run_calculation(MassRate,BallSize, avStSize, best_model, L=_L, P=_P, array_B=array_B)
     return outData #pd.DataFrame(outData['stats'])
         
             
