@@ -1,6 +1,7 @@
 import math
 import scipy.stats as stats
 
+debug = False
 
 def V(index, delta_r, r_min):
     '''
@@ -24,6 +25,10 @@ def B(i, k, delta_r,r_min, P=1.0):
     '''
     Vk = V(k,delta_r,r_min) #volume of parent particle
     Vi = V(i,delta_r,r_min) #volume of daughter particle
+    if debug:
+        print(f'legacy Vk = {Vk}, Vi = {Vi}')
+
+    
     _B = ((30.0 / (Vk)) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk)* (1.0 - Vi / Vk)) if Vk>Vi else 0
     return _B
 
@@ -35,6 +40,8 @@ def B_linear(i, k, delta_r,r_min, P=1.0):
     '''
     Vk = k*delta_r+r_min
     Vi = i*delta_r+r_min
+    if debug:
+        print(f'linear Vk = {Vk}, Vi = {Vi}')
     _B = ((30.0 / (Vk)) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk)* (1.0 - Vi / Vk)) if Vk>Vi else 0
     return _B
 
@@ -43,9 +50,11 @@ def B_simple(i, k, delta_r,r_min, P=1.0):
     i - дочерний
     k - родительский
     '''
+    
     parent_size = k*delta_r+r_min
     daughter_size = i*delta_r+r_min
-
+    if debug:
+        print(f'simple Vk = {parent_size}, Vi = {daughter_size}')
     return parent_size/daughter_size
 
 
@@ -57,6 +66,8 @@ def beta(i, k, delta_r,r_min, P=1.0):
     fbv = vi/vj
     c= 3.0
     m = 0.0013
+    if debug:
+        print(f'beta Vk = {vi}, Vi = {vj}, fbv = {fbv}')
     #sigma = vi/(c*m)
     first = c*m * math.exp((-(fbv - 0.5)**2)  * ((c*m)**2)/2) / math.sqrt(2*math.pi) if vi>vj else 0
     return first
@@ -85,18 +96,27 @@ def gamma_density(x, shape, scale):
 def B_normal(i, k, delta_r, r_min, mean=0.5, std=0.2, P=1.0):
     Vk = V(k, delta_r, r_min)
     Vi = V(i, delta_r, r_min)
+    if debug:
+        print(f'normal Vk = {Vk}, Vi = {Vi}')
     density = normal_density(Vi, mean, std)
     return (P / Vk) * density if Vk > Vi else 0
 
 def B_log_normal(i, k, delta_r, r_min, mean=0.5, std=0.2, P=1.0):
+    print('log normal')
+
     Vk = V(k, delta_r, r_min)
     Vi = V(i, delta_r, r_min)
+    if debug:
+        print(f'log normal Vk = {Vk}, Vi = {Vi}')
     density = log_normal_density(Vi, mean, std)
     return (P / Vk) * density if Vk > Vi else 0
 
 def B_gamma(i, k, delta_r, r_min, shape = 1.0, scale = 0.5, P=1.0):
+    print('gamma')
     Vk = V(k, delta_r, r_min)
     Vi = V(i, delta_r, r_min)
+    if debug:
+        print(f'gamma Vk = {Vk}, Vi = {Vi}')
     density = gamma_density(Vi, shape, scale)
     return (P / Vk) * density if Vk > Vi else 0
 
