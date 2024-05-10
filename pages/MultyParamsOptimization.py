@@ -3,11 +3,9 @@ import math_module as mm
 import pandas as pd
 import numpy as np
 from pymoo.algorithms.soo.nonconvex.ga import GA
-from pymoo.optimize import minimize
-from pymoo.termination import get_termination 
-from pymoo.optimize import minimize
-
 from pymoo.core.problem import Problem
+from pymoo.optimize import minimize
+from pymoo.termination import get_termination
 
 class MyProblem(Problem):
     def __init__(self):
@@ -22,29 +20,27 @@ class MyProblem(Problem):
             [3.0, 2.0, 2.043],
             [5.0, 2.0, 1.831]
         ]
-
         for L, P in X:
             errors = []
             mass_deltas = []
             for s in samples:
                 resData = pd.DataFrame(mm.run_calculation(s[0], s[1], 23.7, None, P=P, L=L)['stats'])
                 minimum = resData['mean'].min()
-                mass_delta = resData['mean'].std()
+                mass_delta = resData['mass'].std()
                 mass_deltas.append(mass_delta)
                 errors.append((minimum - s[2]) ** 2)
             mse_value = sum(errors) / len(samples)
             mass_value = sum(mass_deltas) / len(samples)
             f1.append(mse_value)
             f2.append(mass_value)
-            st.write(f"L = `{L}`, P = `{P}`, MSE = `{mse_value}`, Mass = `{mass_value}`")
+            st.write(f"L:`{L}` P:`{P}` mse:`{mse_value}` mass:`{mass_value}`")
         out["F"] = np.column_stack([f1, f2])
 
-def FindP():
+def FindP(pop_size, n_gen):
     problem = MyProblem()
-    algorithm = GA(pop_size=100)
+    algorithm = GA(pop_size=pop_size)
 
-    termination = get_termination("n_gen", 40)
-
+    termination = get_termination("n_gen", n_gen)
     res = minimize(problem,
                    algorithm,
                    termination,
@@ -54,7 +50,17 @@ def FindP():
     st.json(res.X)
     st.json(res.F)
 
-go = st.button("Начать подбор!")
+with st.expander("Инструкция по использованию интерфейса"):
+    st.write("""
+    - **Количество поколений**: Задаёт, сколько поколений будет выполняться генетический алгоритм.
+    - **Размер популяции**: Определяет, сколько решений будет рассмотрено в каждом поколении.
+    - **Начать оптимизацию**: Нажмите кнопку, чтобы начать процесс оптимизации.
+    """)
+
+pop_size = st.slider("Размер популяции", 50, 200, 100)
+n_gen = st.slider("Количество поколений", 10, 100, 40)
+
+go = st.button("Начать оптимизацию!")
 
 if go:
-    FindP()
+    FindP(pop_size, n_gen)

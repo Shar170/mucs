@@ -28,8 +28,8 @@ if material == 'Al₂O₃':
     densParticle = 4000
     #-densBalls
     densBalls = 5680
-    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=141.85138065317878)
-    P = st.sidebar.number_input("Коэффициент дочерних частиц", min_value=0.0, value=2.3587454416787965)#0.17# 1.43682
+    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=296.9088149987542)
+    P = st.sidebar.number_input("Коэффициент дочерних частиц", min_value=0.0, value=1.212685710159255)#0.17# 1.43682
 else:
     typeMill = 1
     #-oborot
@@ -98,33 +98,47 @@ else:
         resData = pd.DataFrame(runCalc()['stats'])
         resData.to_csv('resData.csv', index=False)
         
-        _, col, _ = st.columns([1,1,1])
+        _, col, _ = st.columns([1,3,1])
         with col:
             st.write('Распределение частиц по размерам:')
             st.table(resData[['time', 'mean', 'mass']])
 
-
-        target_time = resData[resData['mean'] <= averageSize]['time'].iloc[0]
-
-        st.write('Желаемый размер достигается на ' + str(round(target_time)) + ' минуте')
+        try:
+            target_time = resData[resData['mean'] <= averageSize]['time'].iloc[0]
+            st.write('Желаемый размер достигается на ' + str(round(target_time)) + ' минуте')
+        except:
+            target_time = resData[resData['mean'] <= resData['mean'].min()]['time'].iloc[0]
         
         fig = px.line(pd.DataFrame(resData), x='time', y='mean',line_shape="spline")
         fig = fig.update_layout(title='Кинетика процесса измельчения',xaxis_title='время, мин',yaxis_title='размер частиц, мкм')
         st.plotly_chart(fig)
-        
-        arr2 = resData[resData['mean'] <= averageSize ]['sizes'].iloc[0]
+        try:
+            arr2 = resData[resData['mean'] <= averageSize ]['sizes'].iloc[0]
+        except:
+            arr2 = resData[resData['mean'] <= resData['mean'].min() ]['sizes'].iloc[0]
+
         f_particles = pd.DataFrame({'r':pd.Series(arr2[0]), 'f':pd.Series(arr2[1])})
         f_particles['f'] =100*f_particles['f'] / f_particles['f'].sum(axis=0)  
         f_particles['r'] = 2*f_particles['r']
-        f_particles['time'] = 'time:'+str(resData[resData['mean'] >= averageSize ]['time'].iloc[-1])+' size:' + \
+        try:
+            f_particles['time'] = 'time:'+str(resData[resData['mean'] >= averageSize ]['time'].iloc[-1])+' size:' + \
                                 str(resData[resData['mean'] >= averageSize]['mean'].iloc[-1])
+        except:
+            f_particles['time'] = 'time:'+str(resData[resData['mean'] >= resData['mean'].min() ]['time'].iloc[-1])+' size:' + \
+                                str(resData[resData['mean'] >= resData['mean'].min()]['mean'].iloc[-1])
         f_particles['cum_f'] = np.cumsum(f_particles['f'])
                 
         #st.write('Среднее: ', resData[resData['mean'] <= mean ]['mean'].iloc[0],'<=>', np.average(arr2[0], weights = arr2[1]))
 #         nbins= f_particles.shape[0]+1
+        col1, col2 = st.columns(2)
         fig2 = px.line(f_particles, x= 'r', y='f', log_x=True)
         fig2 = fig2.update_layout(title='Дифференциальное распределение частиц по размерам',xaxis_title='Размер фракции частиц(диаметры), мкм',yaxis_title='Доля фракции, %')
-        st.plotly_chart(fig2)
+        col1.plotly_chart(fig2)
+
+        fig2_1 = px.line(f_particles, x= 'r', y='f')
+        fig2_1 = fig2_1.update_layout(title='Дифференциальное распределение частиц по размерам',xaxis_title='Размер фракции частиц(диаметры), мкм',yaxis_title='Доля фракции, %')
+        col2.plotly_chart(fig2_1)
+
         
         fig3 = px.line(f_particles, x= 'r', y='cum_f')
         fig3 = fig3.update_layout(title='Интегральное распределение частиц по размерам',xaxis_title='Размер фракции частиц(диаметры), мкм',yaxis_title='Доля фракции, %')

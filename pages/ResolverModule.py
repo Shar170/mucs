@@ -4,10 +4,11 @@ import pandas as pd
 from scipy.optimize import minimize
 from datetime import datetime
 
-prog_bar = None
 
-def mse(LP):
+array_B = None
+def combined_objective(LP, weight_mse=0.5, weight_mass=0.5):
     L, P = LP
+    #P = 1.0
     samples = [
         [3.0, 5.0, 3.424],
         [5.0, 5.0, 2.972],
@@ -16,34 +17,39 @@ def mse(LP):
     ]
 
     errors = []
+    mass_values = []
 
     for s in samples:
-        resData = pd.DataFrame(mm.run_calculation(s[0], s[1], 23.7, None, P=P, L=L, prog_bar=prog_bar)['stats'])
+        resData = pd.DataFrame(mm.run_calculation(s[0], s[1], 23.7, None, P=P, L=L, array_B=array_B)['stats'])
         minimum = resData['mean'].min()
+        mass = resData['mass'].std()  # предполагаем, что 'mass' присутствует в DataFrame
         errors.append((minimum - s[2]) ** 2)
-    result = sum(errors) / len(samples)
-    st.write(f"MSE: `{result}` L:`{L}` P:`{P}` ")
-    return result
+        mass_values.append(mass)
 
-def find_P(params):
-    L, P = params
-    mse_value = mse(L, P)
-    return {'L': L, 'P': P, 'MSE': mse_value}
+    mse_value = sum(errors) / len(samples)
+    average_mass = sum(mass_values) / len(samples)
+
+    st.write(f"MSE: `{mse_value}`, Mass: `{average_mass}`, L:`{L}` P:`{P}` ")
+    return mse_value
 
 def FindP():
-    researchs = []
-    initial_guess = [7.06981, 0.1]  # Initial guess for L and P
+    initial_guess = [240.0, 1.0]  # Initial guess for L and P
     bounds = [(0, None), (0, None)]  # Bounds for L and P, L >= 0, P >= 0
-    result = minimize(mse, initial_guess, bounds=bounds)
-    st.write(f"L:`{result[0]}` P:`{result[1]}` ")
+    result = minimize(combined_objective, initial_guess, bounds=bounds)
+    st.write(f"Optimized L:`{result.x[0]}` P:`{result.x[1]}` ")
 
 go = st.button("Начать подбор!")
 
-
-
 if go:
-    prog_bar = st.progress(0, 'Прогресс расчёта') 
+    prog_bar = st.progress(0)  # Инициализация прогресс-бара
+    array_B = mm.get_array_B()
     st.write(f'Время начала расчёта {datetime.now()}')
     FindP()
     st.write(f'Время окончания расчёта {datetime.now()}')
+    prog_bar.progress(100)  # Заполнение прогресс-бара до 100% после завершения расчетов
 
+
+
+
+#MSE: 0.017023470810827293, Mass: 0.18013835786691182, L:296.9088149987542 P:1.21268572015925
+#Optimized L:296.9088149987542 P:1.21268571015925
