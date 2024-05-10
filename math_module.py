@@ -69,7 +69,7 @@ def beta(vj, vi):
     return first
 
 def alterB(i, k, delta_r,r_min, P=1.0):
-    return B(i, k, delta_r,r_min, P) #L = 141.85  P=2.35
+    return B(i, k, delta_r,r_min, P) #L = 3.85  P=2.35
     '''
     i - дочерний
     k - родительский
