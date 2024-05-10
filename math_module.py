@@ -47,36 +47,24 @@ def getEps(z1,z2):
     return _eps
 
 
-
-def B(i, k, delta_r,r_min, P=1.0):
-    '''
-    i - дочерний
-    k - родительский
-    '''
-    Vk = V(k,delta_r,r_min)
-    Vi = V(i,delta_r,r_min)
-    _B = ((30.0 / (Vk)) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk)* (1.0 - Vi / Vk)) if Vk>Vi else 0
-    return _B
-
-def beta(vj, vi):
-    #vi is parent
-    #vj is children
-    fbv = vi/vj
-    c= 3.0
-    m = 0.0013
-    #sigma = vi/(c*m)
-    first = c*m * math.exp((-(fbv - 0.5)**2)  * ((c*m)**2)/2) / math.sqrt(2*math.pi)
-    return first
-
 def alterB(i, k, delta_r,r_min, P=1.0):
-    return B(i, k, delta_r,r_min, P) #L = 3.85  P=2.35
     '''
     i - дочерний
     k - родительский
     '''
-    Vk = V(k,delta_r,r_min)
-    Vi = V(i,delta_r,r_min)
-    return beta(Vi, Vk) #L = 296.91  P=1.21
+    import daughter_distr as dd #импорт модуля дочерних распределений
+
+    return dd.B_linear(i, k, delta_r,r_min, P)
+
+    return dd.B_gamma(i, k, delta_r,r_min, P)
+
+    return dd.B_normal(i, k, delta_r,r_min, P)
+
+    return dd.B_log_normal(i, k, delta_r,r_min, P)
+
+    return dd.B(i, k, delta_r,r_min, P) #L = 3.85  P=2.35
+
+    return dd.beta(V(i,delta_r,r_min), V(k,delta_r,r_min)) #L = 296.91  P=1.21
 
 
 def validate_mass_conservation(r_array):
@@ -145,7 +133,10 @@ def get_array_B():
     r_min = 0.0000001*pow(10, -6) # минимальный радиус частицы
     r_max = 50*pow(10, -6) # максимальный радиус частицы
     r0 = r_max # средний радиус частицы
-        # Инициализация
+
+    r_max /= r0
+    r_min /= r0
+
     Nr = 3*pow(10, 3) # количество отрезков разбиения
     delta_r = (r_max - r_min) / Nr # шаг по радиусу
     return np.apply_along_axis(lambda ij: alterB(ij[0], ij[1],delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
