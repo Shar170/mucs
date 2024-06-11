@@ -57,45 +57,7 @@ def alterB(i, k, delta_r,r_min, P=1.0, B_function = None):
         return B_function(i, k, delta_r,r_min, P)
     else:
         return dd.B(i, k, delta_r,r_min, P) #L = 3.85  P=2.35
-    
-    return dd.B_linear(i, k, delta_r,r_min, P)
 
-    return dd.B_gamma(i, k, delta_r,r_min, P)
-
-    return dd.B_normal(i, k, delta_r,r_min, P)
-
-    return dd.B_log_normal(i, k, delta_r,r_min, P)
-
-
-    return dd.beta(V(i,delta_r,r_min), V(k,delta_r,r_min)) #L = 296.91  P=1.21
-
-
-def validate_mass_conservation(r_array):
-    """
-    Проверка сохранения массы для дискретного распределения частиц.
-
-    Args:
-    Vs (np.array): Массив объемов частиц.
-    m (np.array): Массив масс частиц, соответствующих V.
-    V_prime (float): Объем, для которого проверяется сохранение массы.
-
-    Returns:
-    bool: True если масса сохраняется в пределах погрешности, иначе False.
-    """
-
-    # Пример данных
-    Vs = [V(i, delta_r, r_min) for i in r_array]  # Объемы от 0.1 до 10
-    m = 3 * V**2  # Примерное распределение массы, m = 3V^2
-    V_prime = 5  # Значение V', для которого нужно проверить сохранение массы
-
-    delta_V = Vs[1] - Vs[0]  # Разница между последовательными объемами
-    integral_sum = np.sum(m * alterB(Vs, V_prime) * delta_V)
-    mass_V_prime = m[np.argmin(np.abs(Vs - V_prime))]  # Примерная масса при V'
-
-    # Проверяем, равен ли интеграл массе V'
-    # Можно добавить погрешность, если нужно учитывать численные ошибки
-    print(integral_sum, mass_V_prime)
-    return np.isclose(integral_sum, mass_V_prime, atol=1e-6)
 
 
 def SumInegral(f, t, r , array_A , array_B, delta_r):
@@ -133,16 +95,20 @@ def mass_of_all_particle(f, t, ps, f0, V0, delta_r, Nr, r_min):
     return ps * Volume
 
 def get_array_B(B_function = None):
-    r_min = 0.0000001*pow(10, -6) # минимальный радиус частицы
-    r_max = 50*pow(10, -6) # максимальный радиус частицы
+    r_min = 0.0000001*pow(10.0, -6) # минимальный радиус частицы
+    r_max = 50.0*pow(10.0, -6) # максимальный радиус частицы
     r0 = r_max # средний радиус частицы
 
     r_max /= r0
     r_min /= r0
 
     Nr = 3*pow(10, 3) # количество отрезков разбиения
-    delta_r = (r_max - r_min) / Nr # шаг по радиусу
-    return np.apply_along_axis(lambda ij: alterB(ij[0], ij[1],delta_r, r_min, B_function = B_function), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
+    delta_r = (r_max - r_min) / float(Nr) # шаг по радиусу
+    return np.apply_along_axis(lambda ij: alterB(ij[0], ij[1], delta_r, r_min, B_function = B_function), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
+
+def D_corrected(t, alpha):
+    return (1 - alpha) * np.exp(-t/3600.0) + alpha * (1 + np.log(1 + t/(3600.0)))
+
 
 
 def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4, prog_bar = None, array_B = None):
@@ -214,6 +180,7 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
     s = datetime.datetime.now()
     f_time = datetime.datetime.now()
     old_time = 0
+    start_mass =  mass_of_all_particle(f, 0 ,ps, f0, V0, delta_r, Nr, r_min)
     for t in range(0,Nt-1):
         s = datetime.datetime.now()
         if t == 2:
@@ -221,22 +188,24 @@ def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_f
         K_vol = 1.0
 
         for r in range(Nr-1):
-            #r_integral = analog_f((delta_r*r+r_min)*K_vol,Nr,delta_r,r_min)
-            dt_integral = 4*math.pi*((delta_r*r+r_min)**2) *delta_t * SumInegral(f, t, r , array_A, array_B, delta_r)
+            r_integral = analog_f((delta_r*r+r_min)*D_corrected(t,P),Nr,delta_r,r_min)
+            dt_integral = 4*math.pi*((delta_r*r+r_min)**2) *delta_t * SumInegral(f, t, r_integral , array_A, array_B, delta_r)
             f_half[r] = f[t][r] + P*dt_integral
             one_plus_dt_A = 1.0 + delta_t*array_A[r]*A0
             f[t + 1][r] = f_half[r] / one_plus_dt_A
         
-        f_all = np.sum(f[t+1])            
-        print(f_all)
-        f[t+1] = f[t+1] / f_all
-
+        #f_all = np.sum(f[t+1])            
+        #print(f_all)
+        #f[t+1] = f[t+1] / f_all
+        new_mass = mass_of_all_particle(f,t,ps, f0, V0, delta_r, Nr, r_min)
+        f[t] = start_mass * f[t] / new_mass
+        corrected_mass = mass_of_all_particle(f,t,ps, f0, V0, delta_r, Nr, r_min)
         diam_temp = r0*RadiusMean(f, t,delta_r, r_min)*2/pow(10,-6)
         stat_element = {
                 'time' : t*delta_t*t0/60,
                 'mean': diam_temp,
                 'sizes': [r_array,list(f[t+1])],
-                'mass': mass_of_all_particle(f,t,ps, f0, V0, delta_r, Nr, r_min)
+                'mass': corrected_mass
             }
         output.append(
             stat_element

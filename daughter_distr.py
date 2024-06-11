@@ -16,7 +16,12 @@ def V(index, delta_r, r_min):
         float: volume of the particle
     '''
     radius = r_min + index * delta_r
-    return (4/3) * math.pi * radius**3
+    volume = (4.0/3.0) * math.pi * radius**3.0
+    volume = volume / ((4.0/3.0) * math.pi) #нормировка объёма
+    if debug:
+        print(f'V({index}, {delta_r}, {r_min}) = radius: {radius}, volume: {volume}')
+    
+    return volume
 
 def B(i, k, delta_r,r_min, P=1.0):
     '''
@@ -25,11 +30,14 @@ def B(i, k, delta_r,r_min, P=1.0):
     '''
     Vk = V(k,delta_r,r_min) #volume of parent particle
     Vi = V(i,delta_r,r_min) #volume of daughter particle
-    if debug:
-        print(f'legacy Vk = {Vk}, Vi = {Vi}')
+    #_B = ((Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk)* (1.0 - Vi / Vk)) if Vk>Vi else 0
+    if Vk>Vi:
+        _B = (30.0 / Vk) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk) * (1.0 - Vi / Vk)
+    else:
+        _B = 0.0
 
-    
-    _B = ((30.0 / (Vk)) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk)* (1.0 - Vi / Vk)) if Vk>Vi else 0
+    if debug:
+        print(f'B({i}, {k}, {delta_r}, {r_min}, {P}) = {_B}\n')
     return _B
 
 
@@ -40,10 +48,16 @@ def B_linear(i, k, delta_r,r_min, P=1.0):
     '''
     Vk = k*delta_r+r_min
     Vi = i*delta_r+r_min
+
+    if Vk>Vi:
+        _B = (30.0 / Vk) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk) * (1.0 - Vi / Vk)
+    else:
+        _B = 0.0
+
     if debug:
         print(f'linear Vk = {Vk}, Vi = {Vi}')
-    _B = ((30.0 / (Vk)) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk)* (1.0 - Vi / Vk)) if Vk>Vi else 0
-    return _B
+        print(f'B_linear({i}, {k}, {delta_r}, {r_min}, {P}) = {_B}\n')
+    return _B / 3000.0
 
 def B_simple(i, k, delta_r,r_min, P=1.0):
     '''
@@ -99,7 +113,7 @@ def B_normal(i, k, delta_r, r_min, mean=0.5, std=0.2, P=1.0):
     if debug:
         print(f'normal Vk = {Vk}, Vi = {Vi}')
     density = normal_density(Vi, mean, std)
-    return (P / Vk) * density if Vk > Vi else 0
+    return density if Vk > Vi else 0
 
 def B_log_normal(i, k, delta_r, r_min, mean=0.5, std=0.2, P=1.0):
     print('log normal')
@@ -109,7 +123,7 @@ def B_log_normal(i, k, delta_r, r_min, mean=0.5, std=0.2, P=1.0):
     if debug:
         print(f'log normal Vk = {Vk}, Vi = {Vi}')
     density = log_normal_density(Vi, mean, std)
-    return (P / Vk) * density if Vk > Vi else 0
+    return density if Vk > Vi else 0
 
 def B_gamma(i, k, delta_r, r_min, shape = 1.0, scale = 0.5, P=1.0):
     print('gamma')
@@ -118,7 +132,10 @@ def B_gamma(i, k, delta_r, r_min, shape = 1.0, scale = 0.5, P=1.0):
     if debug:
         print(f'gamma Vk = {Vk}, Vi = {Vi}')
     density = gamma_density(Vi, shape, scale)
-    return (P / Vk) * density if Vk > Vi else 0
+    return density if Vk > Vi else 0
+
+def B_Empty(i, k, delta_r, r_min, P=1.0):
+    return 1.0
 
 daughter_distributions = { 'Линейное распределение': B_linear, 
                           'Гамма-распределение': B_gamma, 
@@ -126,4 +143,5 @@ daughter_distributions = { 'Линейное распределение': B_line
                           'Лог-нормальное распределение': B_log_normal, 
                           'Упрощённое распределение': B_simple,
                           'Бета-распределение': beta,
-                          'Легаси распределение': B}
+                          'Легаси распределение': B,
+                          'Empty':B_Empty}
