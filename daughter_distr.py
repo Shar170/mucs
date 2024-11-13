@@ -23,16 +23,74 @@ def V(index, delta_r, r_min):
     
     return volume
 
+def B_mass_conserving(i, k, delta_r, r_min, P=1.0):
+    Vk = V(k, delta_r, r_min)  # Объём родительской частицы
+    Vi = V(i, delta_r, r_min)  # Объём дочерней частицы
+
+    if Vk > Vi:
+        unnormalized_B = (30.0 / Vk) * ((Vi / Vk)**2) * (1.0 - Vi / Vk)**2
+    else:
+        unnormalized_B = 0.0
+
+    # Вычисление нормировочного коэффициента
+    total_mass_ratio = 0.0
+    for j in range(int(k)):
+        Vj = V(j, delta_r, r_min)
+        if Vk > Vj:
+            B_jk = (30.0 / Vk) * ((Vj / Vk)**2) * (1.0 - Vj / Vk)**2
+            total_mass_ratio += B_jk * (Vj / Vk) * delta_r
+
+    if total_mass_ratio > 0:
+        normalized_B = unnormalized_B / total_mass_ratio
+    else:
+        normalized_B = 0.0
+
+    return normalized_B
+def B_united(i, k, delta_r,r_min, P=1.0):
+    '''
+    i - дочерний
+    k - родительский
+    '''
+    Vk = V(k, delta_r, r_min)
+    Vi = V(i, delta_r, r_min)
+
+    Vi = Vi / Vk
+    Vk = 1.0
+
+    if Vk>Vi:
+        _B = (30.0 / Vk) * ((Vi / Vk)**2) * (1.0 - Vi / Vk)**2
+    else:
+        _B = 0.0
+
+    if debug:
+        print(f'united Vk = {Vk}, Vi = {Vi}')
+    return _B
+
+
 def B(i, k, delta_r,r_min, P=1.0):
     '''
     i - дочерний
     k - родительский
     '''
+    Vk = V(k, delta_r, r_min)
+    Vi = V(i, delta_r, r_min)
+
+    Vi = Vi / Vk
+    Vk = 1.0
+
+    if Vk>Vi:
+        _B = (30.0 / Vk) * ((Vi / Vk)**2) * (1.0 - Vi / Vk)**2
+    else:
+        _B = 0.0
+
+    if debug:
+        print(f'united Vk = {Vk}, Vi = {Vi}')
+    return _B
     Vk = V(k,delta_r,r_min) #volume of parent particle
     Vi = V(i,delta_r,r_min) #volume of daughter particle
     #_B = ((Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk)* (1.0 - Vi / Vk)) if Vk>Vi else 0
     if Vk>Vi:
-        _B = (30.0 / Vk) * (Vi / Vk) * (Vi / Vk) * (1.0 - Vi / Vk) * (1.0 - Vi / Vk)
+        _B = (30.0 / Vk) * ((Vi / Vk)**2) * (1.0 - Vi / Vk)**2
     else:
         _B = 0.0
 
@@ -116,7 +174,6 @@ def B_normal(i, k, delta_r, r_min, mean=0.5, std=0.2, P=1.0):
     return density if Vk > Vi else 0
 
 def B_log_normal(i, k, delta_r, r_min, mean=0.5, std=0.2, P=1.0):
-    print('log normal')
 
     Vk = V(k, delta_r, r_min)
     Vi = V(i, delta_r, r_min)
@@ -126,7 +183,7 @@ def B_log_normal(i, k, delta_r, r_min, mean=0.5, std=0.2, P=1.0):
     return density if Vk > Vi else 0
 
 def B_gamma(i, k, delta_r, r_min, shape = 1.0, scale = 0.5, P=1.0):
-    print('gamma')
+
     Vk = V(k, delta_r, r_min)
     Vi = V(i, delta_r, r_min)
     if debug:
@@ -137,11 +194,12 @@ def B_gamma(i, k, delta_r, r_min, shape = 1.0, scale = 0.5, P=1.0):
 def B_Empty(i, k, delta_r, r_min, P=1.0):
     return 1.0
 
-daughter_distributions = { 'Линейное распределение': B_linear, 
+daughter_distributions = { 
+                          'Легаси распределение': B,
+                          'Линейное распределение': B_linear, 
                           'Гамма-распределение': B_gamma, 
                           'Нормальное распределение': B_normal, 
                           'Лог-нормальное распределение': B_log_normal, 
                           'Упрощённое распределение': B_simple,
                           'Бета-распределение': beta,
-                          'Легаси распределение': B,
                           'Empty':B_Empty}

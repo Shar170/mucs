@@ -39,12 +39,12 @@ if material == 'Al₂O₃':
     'Лог-нормальное распределение':  [5.0, 1.0], 
     'Упрощённое распределение':  [5.0, 1.0],
     'Бета-распределение': [296.91, 1.21],
-    'Легаси распределение': [3.85, 2.35],
+    'Легаси распределение': [3.444565446382877, 0.3986068891347607],
     'Empty': [100.0, 1.0]
     }
 
-    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=recomendations[daughter_distribution_key ][0])
-    P = st.sidebar.number_input("Коэффициент дочерних частиц", min_value=0.0, value=recomendations[daughter_distribution_key ][1])#0.17# 1.43682
+    L = st.sidebar.number_input("Феноменологический коэффициент", min_value=0.0, value=recomendations[daughter_distribution_key ][0], format="%.6f")
+    P = st.sidebar.number_input("Коэффициент дочерних частиц", min_value=0.0, value=recomendations[daughter_distribution_key ][1], format="%.6f")
 else:
     typeMill = 1
     #-oborot
@@ -119,6 +119,7 @@ else:
         with col:
             st.write('Распределение частиц по размерам:')
             st.table(resData[['time', 'mean', 'mass']])
+            #st.table(resData[['time', 'mean']])
 
         try:
             target_time = resData[resData['mean'] <= averageSize]['time'].iloc[0]
@@ -161,9 +162,10 @@ else:
         fig3 = fig3.update_layout(title='Интегральное распределение частиц по размерам',xaxis_title='Размер фракции частиц(диаметры), мкм',yaxis_title='Доля фракции, %')
         st.plotly_chart(fig3)
 
-        fig4 = px.line(pd.DataFrame(resData), x='time', y='mass',line_shape="spline")
-        fig4 = fig4.update_layout(title='Масса частиц во времени',xaxis_title='время, мин',yaxis_title='масса, г')
-        st.plotly_chart(fig4)
+        if True:
+            fig4 = px.line(pd.DataFrame(resData), x='time', y='mass',line_shape="spline")
+            fig4 = fig4.update_layout(title='Масса частиц во времени',xaxis_title='время, мин',yaxis_title='масса, г')
+            st.plotly_chart(fig4)
         
         #st.dataframe(resData)
 with st.expander('Справка'):
