@@ -113,7 +113,7 @@ else:
     if bt :
         
         resData = pd.DataFrame(runCalc()['stats'])
-        resData.to_csv('resData.csv', index=False)
+        resData.to_csv('cache/resData.csv', index=False)
         
         _, col, _ = st.columns([1,3,1])
         with col:

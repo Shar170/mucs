@@ -10,6 +10,8 @@ import scipy.ndimage
 
 array_B = None
 
+logfile= None
+
 daughter_distribution_key = st.selectbox("Распределение дочерних элементов", daughter_distributions.keys())
 recomendations = {
     'Легаси распределение': [3.511395783458054, 0.6064103878047064],
@@ -20,19 +22,19 @@ recomendations = {
     'Empty': [100, 1.0]
 }
 st.markdown("---")
-L_start = st.number_input("стартовое значение L", value=recomendations[daughter_distribution_key][0])
-L_min_bounds = st.number_input("минимальное значение L", value=0.0, step=0.1, min_value=0.0, max_value=1000.0)
+L_start = st.number_input("стартовое значение L", value=recomendations[daughter_distribution_key][0], format="%.6f")
+L_min_bounds = st.number_input("минимальное значение L", value=0.0000001, step=0.100000, min_value=0.0, format="%.6f")
 L_use_max = st.checkbox("Выбрать максимальное значение L", value=False)
 if L_use_max:
-    L_max_bounds = st.number_input("максимальное значение L", value=1000.0, step=0.1, min_value=0.0, max_value=1000.0)
+    L_max_bounds = st.number_input("максимальное значение L", value=1000.0, step=0.1000000, min_value=0.0, format="%.6f")
 else:
     L_max_bounds = None
 st.markdown("---")
-P_start = st.number_input("стартовое значение p", value=recomendations[daughter_distribution_key][1])
-P_min_bounds = st.number_input("минимальное значение p", value=0.0, step=0.1, min_value=0.0, max_value=1000.0)
+P_start = st.number_input("стартовое значение p", value=recomendations[daughter_distribution_key][1], format="%.6f")
+P_min_bounds = st.number_input("минимальное значение p", value=0.0, step=0.100000, min_value=0.0, format="%.6f")
 P_use_max = st.checkbox("Выбрать максимальное значение p", value=False)
 if P_use_max:
-    P_max_bounds = st.number_input("максимальное значение p", value=1000.0, step=0.1, min_value=0.0, max_value=1000.0)
+    P_max_bounds = st.number_input("максимальное значение p", value=1000.0, step=0.100000, min_value=0.0, format="%.6f")
 else:
     P_max_bounds = None
 
@@ -77,6 +79,7 @@ def combined_objective(LP, weight_mse=0.5, weight_mass=0.5):
     total_objective = weight_mse * mse_value + weight_mass * average_mass_std_dev #+ weight_mass * average_max_relative_change
 
     st.write(f"MSE: `{mse_value}`, Average Mass STD: `{average_mass_std_dev}`, Average Max Relative Mass Change: `{average_max_relative_change}`, L:`{L}` P:`{P}` ")
+    log_file.write(f"MSE: `{mse_value}`, Average Mass STD: `{average_mass_std_dev}`, Average Max Relative Mass Change: `{average_max_relative_change}`, L:`{L}` P:`{P}` \n")
     return total_objective
 
 def FindP():
@@ -150,9 +153,17 @@ if st.button("Анализ B(r,γ)"):
     analyze_and_plot_array(array_B)
 
 if st.button("Начать подбор!"):
+    #open log file
+    str_calc_date = datetime.now().strftime("%Y-%m-%d--%H--%M--%S")
+    log_file= open(f"logs/log_{str_calc_date}.txt", "w")
+#    log_file = open(f"log_.txt", "w")
+
     prog_bar = st.progress(0)  # Инициализация прогресс-бара
     array_B = mm.get_array_B(daughter_distributions[daughter_distribution_key])
+    log_file.write(f"Resolve begin: {datetime.now()}\n")
     st.write(f'Время начала расчёта {datetime.now()}')
     FindP()
     st.write(f'Время окончания расчёта {datetime.now()}')
+    log_file.write(f"Resolving success ended: {datetime.now()}\n")
     prog_bar.progress(100)  # Заполнение прогресс-бара до 100% после завершения расчетов
+    log_file.close()
