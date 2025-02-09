@@ -14,7 +14,7 @@ logfile= None
 
 daughter_distribution_key = st.selectbox("Распределение дочерних элементов", daughter_distributions.keys())
 recomendations = {
-    'Легаси распределение': [3.511395783458054, 0.6064103878047064],
+    'Легаси распределение': [0.101873, 1.0],
     'Линейное распределение': [185.41, 0.5], #MSE: 0.011390419611706773, Average Mass STD: 0.018712585808390535, Average Max Relative Mass Change: 0.9999662500581183, L:281.83831529116355 P:1.7037483640402504
     'Гамма-распределение': [405.8, 7.81], 
     'Лог-нормальное распределение': [197.82, 1.0], 
@@ -44,10 +44,10 @@ st.markdown("---")
 def combined_objective(LP, weight_mse=0.5, weight_mass=0.5):
     L, P = LP
     samples = [
-        [3.0, 5.0, 3.424],
-        [5.0, 5.0, 2.972],
-        [3.0, 2.0, 2.043],
-        [5.0, 2.0, 1.831]
+        [ 5.0, 3.0, 3.424],
+        [ 5.0, 5.0, 2.972],
+        [ 2.0, 3.0, 2.043],
+        [ 2.0, 5.0, 1.831]
     ]
 
     errors = []
@@ -55,7 +55,7 @@ def combined_objective(LP, weight_mse=0.5, weight_mass=0.5):
     max_relative_changes = []
 
     for s in samples:
-        resData = pd.DataFrame(mm.run_calculation(s[0], s[1], 23.7, None, P=P, L=L, array_B=array_B)['stats'])
+        resData = pd.DataFrame(mm.run_calculation(s, 23.7, None, P=P, L=L, array_B=array_B)['stats'])
         minimum = resData['mean'].min()
 
         mass_series = resData['mass']
@@ -69,7 +69,7 @@ def combined_objective(LP, weight_mse=0.5, weight_mass=0.5):
         relative_changes = abs(mass_series - initial_mass) / initial_mass
         max_relative_change = relative_changes.max()
         max_relative_changes.append(max_relative_change)
-
+        print('calc=', minimum,'  expected=', s[2])
         errors.append((minimum - s[2]) ** 2)
 
     mse_value = sum(errors) / len(samples)
@@ -92,7 +92,13 @@ def FindP():
 def analyze_and_plot_array(array_B):
     # Преобразуем array_B в numpy массив, если он ещё не в этом формате
     #array_B = np.array(array_B)
+    from scipy.integrate import quad
+    b_function = daughter_distributions[daughter_distribution_key]
 
+    integral_check, _ = quad(lambda i: b_function(i, 1, 0.5, 0.1), 0, 1)
+    st.write(f"Интеграл beta: {integral_check}")  # Должен быть ≈ 1
+    
+    array_B = mm.get_array_B(daughter_distributions[daughter_distribution_key])
     # Вычисляем основные статистические показатели
     mean_value = np.mean(array_B)
     std_dev = np.std(array_B)
@@ -149,8 +155,8 @@ def analyze_and_plot_array(array_B):
 
 if st.button("Анализ B(r,γ)"):
     # Предположим, что array_B был загружен или определен ранее
-    array_B = mm.get_array_B(daughter_distributions[daughter_distribution_key])
-    analyze_and_plot_array(array_B)
+
+    analyze_and_plot_array([])
 
 if st.button("Начать подбор!"):
     #open log file

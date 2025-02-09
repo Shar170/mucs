@@ -4,21 +4,57 @@ import plotly.express as px
 import streamlit as st
 import math_module as mm
 from daughter_distr import daughter_distributions
+import misc
 html_theme = "sphinx_rtd_theme"
 
 st.set_page_config(layout='wide')
 
-
+massStateDisplay = False
 #-avStart
 avStSize=st.sidebar.slider('Исходный средний размер частиц, микрон', min_value=0.5, max_value=100.0, value=23.7, step=0.5)
 #-typeMill 
 typeMill = 0
 material = 'Al₂O₃' #st.sidebar.radio("Измельчаемый материал",('Al₂O₃', 'SiC'))
+
+storage = None
+
+if len(misc.VariableStorage.load_all(directory=misc.def_directory)) == 0:
+    #если ни одного хранилища не найдено, создаём новое дефолтное
+    storage = misc.VariableStorage("Планетарная мельница, измельчение Al₂O₃", 2)
+    storage.add_parameter(0, misc.ControllingParameter(
+        'Размер мелющих шаров',
+        'r_shar',
+        2.0,
+        min_value=0.1,
+        max_value=20.0,
+        unit='мм'
+    ))
+    storage.add_parameter(1, misc.ControllingParameter(
+        'Отношение масс шаров к порошку',
+        'm_shar',
+        3.0,
+        min_value=0.1,
+        max_value=20.0,
+        unit='[-]'
+    ))
+    storage.save()
+    storage.display_settings()
+elif len(misc.VariableStorage.load_all(directory=misc.def_directory)) == 1:
+    storage = misc.VariableStorage.load_all(directory=misc.def_directory)[0]
+    storage.display_settings()
+else:
+    storages = misc.VariableStorage.load_all(misc.def_directory)
+    storage_names = [storage.name for storage in storages]
+    selected_storage = st.selectbox('Выберите хранилище', storage_names)
+    storage = next((storage for storage in storages if storage.name == selected_storage), None)
+    if storage is not None:
+        storage.display_settings()
+
 if material == 'Al₂O₃':
     #-massRatio
-    MassRate = st.sidebar.slider('Отношение масс шаров к порошку:', min_value=0.1, max_value=20.0, value=3.0, step=0.1)
+    MassRate = storage.get_current_values()[0] #st.sidebar.slider('Отношение масс шаров к порошку:', min_value=0.1, max_value=20.0, value=3.0, step=0.1)
     #-sizeBall
-    BallSize = st.sidebar.slider('Размер мелющих шаров:', min_value=0.1, max_value=20.0, value=3.0, step=0.1)
+    BallSize = storage.get_current_values()[1] #st.sidebar.slider('Размер мелющих шаров:', min_value=0.1, max_value=20.0, value=2.0, step=0.1)
     #-typePAV
     typePAV = -1
     #-oborot
@@ -39,7 +75,7 @@ if material == 'Al₂O₃':
     'Лог-нормальное распределение':  [5.0, 1.0], 
     'Упрощённое распределение':  [5.0, 1.0],
     'Бета-распределение': [296.91, 1.21],
-    'Легаси распределение': [3.444565446382877, 0.3986068891347607],
+    'Легаси распределение': [610.3177951100706, 0.01328597074346113],
     'Empty': [100.0, 1.0]
     }
 
@@ -75,7 +111,7 @@ else:
 # Модуль измельчения в планетарной мельнице
 ### Конечный требуемый размер 🏁
 '''
-averageSize=st.slider('Конечный ожидаемый размер, микрон', min_value=0.01, max_value=10.0, value=2.68, step=0.01)
+averageSize=st.slider('Конечный ожидаемый размер, микрон', min_value=0.01, max_value=10.0, value=3.043, step=0.01)
 
 
 best_model = None 
@@ -85,10 +121,9 @@ with st.expander('Обучение новой модели'):
 
 
 bt = st.button('Запустить расчёт')
-bt_help = st.button('Помощь')
 
 #@st.cache(suppress_st_warning=True,allow_output_mutation=True)
-def runCalc(_densBalls = densBalls, _massRatio = MassRate,_sizeBall=BallSize,_densParticle=densParticle, _oborot = oborot, _typePAV = typePAV, _L = L, _P = P):
+def runCalc(_densBalls = densBalls, params: list = [],_densParticle=densParticle, _oborot = oborot, _typePAV = typePAV, _L = L, _P = P):
     if best_model is None:
         st.warning('Используется модель по умолчанию')
     else:
@@ -96,7 +131,7 @@ def runCalc(_densBalls = densBalls, _massRatio = MassRate,_sizeBall=BallSize,_de
 
     array_B = mm.get_array_B(B_function=daughter_distributions[daughter_distribution_key])
 
-    outData = mm.run_calculation(MassRate,BallSize, avStSize, best_model, L=_L, P=_P, array_B=array_B)
+    outData = mm.run_calculation(params, avStSize, best_model, L=_L, P=_P, array_B=array_B)
     return outData #pd.DataFrame(outData['stats'])
         
             
@@ -111,14 +146,15 @@ else:
         best_model = st.selectbox('Модель',  models,  index=2, format_func=lambda m : "аналитическая регрессия" if m is None else m.named_steps['model'].__class__.__name__)
 
     if bt :
-        
-        resData = pd.DataFrame(runCalc()['stats'])
+        st.write(storage.get_current_values())
+        pass
+        resData = pd.DataFrame(runCalc(params=storage.get_current_values())['stats'])
         resData.to_csv('cache/resData.csv', index=False)
         
         _, col, _ = st.columns([1,3,1])
         with col:
             st.write('Распределение частиц по размерам:')
-            st.table(resData[['time', 'mean', 'mass']])
+            st.table(resData[['time', 'mean', 'mass'] if massStateDisplay else ['time', 'mean']])
             #st.table(resData[['time', 'mean']])
 
         try:
@@ -162,7 +198,7 @@ else:
         fig3 = fig3.update_layout(title='Интегральное распределение частиц по размерам',xaxis_title='Размер фракции частиц(диаметры), мкм',yaxis_title='Доля фракции, %')
         st.plotly_chart(fig3)
 
-        if True:
+        if massStateDisplay:
             fig4 = px.line(pd.DataFrame(resData), x='time', y='mass',line_shape="spline")
             fig4 = fig4.update_layout(title='Масса частиц во времени',xaxis_title='время, мин',yaxis_title='масса, г')
             st.plotly_chart(fig4)

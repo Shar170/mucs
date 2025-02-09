@@ -9,7 +9,7 @@ import hashlib
 import pickle
 
 
-normalize_enabled = False # Использовать ли нормализация для снижения размерности задачи
+normalize_enabled = True # Использовать ли нормализация для снижения размерности задачи
 
 LOGGING_ENABLED = True
 LOG_FOLDER = "logs"
@@ -60,18 +60,20 @@ def V(r, delta_r, r_min):
 
 def f_start(x, delta_r, r_min, r0, averStartSize):
     x = (delta_r*x+r_min)*2.0*r0*pow(10.0, 6.0)
+    x_0 = (r_min)*2.0*r0*pow(10.0, 6.0)
     mass_corrector = 0.2 #100000 #0.2
     sigma = 10
     math_oj = averStartSize
-    ret = mass_corrector*math.exp((-pow(x-math_oj,2))/(2.0*sigma*sigma))/(sigma*pow(2*3.141598, 0.5))
-    return ret
+    ret_0 = mass_corrector*math.exp((-pow(x_0-math_oj,2))/(2.0*sigma*sigma))/(sigma*pow(2*3.141598, 0.5))
+    ret = mass_corrector*math.exp((-pow(x-math_oj,2))/(2.0*sigma*sigma))/(sigma*pow(2*3.141598, 0.5)) - ret_0
+    return ret if ret > 0 else 0
 
 def getEps(z1,z2):
     a0 = -93279971
     a1 = -6658820
     a2 = 783271474
     a12 = 191562000
-        
+    print(z1,z2)    
 
     _eps =  a0 + a1 * z1 + a12 * z1 * z2 + a2 * z2
     return _eps
@@ -107,26 +109,48 @@ def RadiusMean(f, t, delta_r, r_min ):
     b *= delta_r / 2.0
     return a / b
 
-def init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, Nr, L, z1, z2, alter_eps_function):
-    params_hash = calculate_hash(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, Nr, L, z1, z2, alter_eps_function)
+def init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, Nr, L, params, alter_eps_function):
+    print(params)
+    params_hash = calculate_hash(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, Nr, getEps, alter_eps_function,  *params)
+    
     array_A_path = os.path.join(CACHE_FOLDER, f"array_A_{params_hash}.pkl")
-
+    L0 = 1.0 /t0
     # Проверка и загрузка сохраненных массивов A и B
     if os.path.exists(array_A_path):
+        print('Loading A with hash: ', params_hash)
         with open(array_A_path, "rb") as f:
             array_A = pickle.load(f)
     else:
         array_A = np.zeros(Nr)
-        eps =getEps(z1, z2) if alter_eps_function is None else alter_eps_function.predict([[z2, z1]])[0]
-        L0 = 1.0 /t0
+        eps =getEps(params[1], 1.0/params[0]) if alter_eps_function is None else alter_eps_function.predict([params])[0]
         for r in range(Nr):
             We = ps * (2*(delta_r*r+r_min)*r0)**(5.0 / 3.0) * eps**(2.0 / 5.0) / gammaBabk
-            array_A[r] =  We * L/L0
+            array_A[r] =  We # * L/L0
+        print('Saving A with hash: ', params_hash)
         # Сохранение массивов A и B
         with open(array_A_path, "wb") as f:
             pickle.dump(array_A, f)
+    plot_1D([(r_min+ x*delta_r)/r0 for x in range(0,Nr)], array_A, 'График движ. силы')
+    return array_A * (L/L0 if normalize_enabled else L)
 
-    return array_A
+import matplotlib.pyplot as plt
+def plot_1D(x, y, title):
+    return
+
+    # Предположим, что у вас есть два массива: один x-координат, другой для y-координат
+    #x = [1, 2, 3, 4, 5]
+    #y = [2, 3, 5, 7, 11]
+    fig, ax = plt.subplots()
+    ax.plot(x, y)
+
+    # Добавляем заголовок и метки осей
+    ax.set_title(title)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+
+    # Отображаем график в Streamlit
+    with st.expander(title):
+        st.pyplot(fig, use_container_width=False)
 
 def init_B(alterB, delta_r, r_min, Nr): # np.apply_along_axis(lambda ij: alterB(ij[0], ij[1],delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))):
          # Вычисление хеша для проверки изменений
@@ -182,17 +206,18 @@ def verify_balance(arr_A, arr_B, f, Nr,r_min, delta_r, P, t = 0 ):
         for g in range(Nr-2):
             sub_right_plus += (arr_A[g]*arr_B[r+1][g]*f[t][g] + arr_A[g+1]*arr_B[r+1][g+1]*f[t][g+1])*delta_r/2
         right += (sub_right_plus + sub_right)*delta_r/2
-    print(f"left: ", left, "right: ", right*P)
+    print(f"left: ", left, "right: ", right*P, "diff:", math.log10(left) - math.log10(right*P))
 
-def run_calculation(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4, prog_bar = None, array_B = None):
-    return run_calculation_volume(z1, d_sphere, averStartSize, alter_eps_function, f, P , L, prog_bar, array_B)
+#z1 = 3.0 , d_sphere = 5.0
+def run_calculation(params: list, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4, prog_bar = None, array_B = None):
+    return run_calculation_volume(params, averStartSize, alter_eps_function, f, P , L, prog_bar, array_B)
 
 
-def run_calculation_volume(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4, prog_bar = None, array_B = None):
+def run_calculation_volume(params: list, averStartSize = 23.7, alter_eps_function = None, f=None, P = 0.0256, L =  6.4, prog_bar = None, array_B = None):
     if prog_bar is None:
         prog_bar = st.progress(0, 'Прогресс расчёта')    
     
-    mass_correction_enabled = False # устанавливает нормировку кривой распределения для достижения стабильной массы
+    mass_correction_enabled = True # устанавливает нормировку кривой распределения для достижения стабильной массы
    
     # Константы
     Nr = 3*pow(10, 3) # количество отрезков разбиения
@@ -210,13 +235,11 @@ def run_calculation_volume(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alte
     delta_r = (r_max - r_min) / Nr # шаг по радиусу
     ps = 2320.0 # плотность порошка (кг/м^3)
 
-    z2 = (10.0**-3) / (d_sphere*(10**(-3)))          # отнесённая к 1 миллиметру размер мелющих шаров (метр)
+    #z2 = (10.0**-3) / (d_sphere*(10**(-3)))          # отнесённая к 1 миллиметру размер мелющих шаров (метр)
     f0 = (2.7*pow(10,7)/(r0))  if normalize_enabled else 1.0
     V0 = ((4.0 / 3.0)*  3.141596 * pow(r0, 3.0))  if normalize_enabled else 1.0
-    size_search = 2.043*pow(10, -6)/(r0*2) # искомый размер частиц
 
     # Коэффициенты
-
     # a0 = -93279971, a1 = -6658820, a2 = 783271474, a12 = 191562000
     gammaBabk = 1.2
     #P = 0.0256
@@ -234,8 +257,8 @@ def run_calculation_volume(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alte
     r_array = [r0*(r*delta_r + r_min) for r in range(Nr)]
 
     print('-*- '*20)
-    print('volume calculation! ','L = ', L, 'P= ', P, 'z1 = ', z1, 'z2 = ', z2, 'date= ', datetime.datetime.now())
-    array_A = init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, Nr, L, z1, z2, alter_eps_function)
+    print('volume calculation! ','L = ', L, 'P= ', P, 'params= ' + ' '.join(map(str, params)) , '     date= ', datetime.datetime.now())
+    array_A = init_A(t0, r0, delta_r, r_min, ps, gammaBabk, Barrier_A, Nr, L, params, alter_eps_function)
     print("sum of all A elements: ", np.sum(array_A))
     prog_bar.progress(0.15, 'Инициализация исходных данных')
 
@@ -247,13 +270,14 @@ def run_calculation_volume(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alte
         f_all = np.sum(f[0])
         f[0] = f[0] / f_all
         print("sum of all F elements: ", np.sum(f[0]))
+    plot_1D([(r_min+ x*delta_r)/r0 for x in range(0,Nr)], f[0], 'начальное распределение')
     start_time = time.time()
     
     #array_B = np.apply_along_axis(lambda ij: alterB(ij[0], ij[1],delta_r, r_min), 2, np.indices((Nr, Nr)).transpose(1, 2, 0))
     
     # Логирование начальных параметров
     if LOGGING_ENABLED:
-        logging_module.log_initialization(LOG_FOLDER, L, P, z1, z2, datetime.datetime.now())
+        logging_module.log_initialization(LOG_FOLDER, L, P, params, datetime.datetime.now())
 
 
     if array_B is None:
@@ -275,8 +299,8 @@ def run_calculation_volume(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alte
         for r in range(Nr-1):
             #r_integral = analog_f((delta_r*r+r_min)*D_corrected(t,P),Nr,delta_r,r_min)
 
-            #r_integral = analog_f((delta_r*r+r_min)*D_corrected(t,P),Nr,delta_r,r_min)
-            r_integral = r
+            r_integral = analog_f(delta_r*r+r_min,Nr,delta_r,r_min)
+            #r_integral = r
             dt_integral = delta_t * SumInegral(f, t, r_integral , array_A, array_B, delta_r)
             f_half[r] = f[t][r] + P*dt_integral
             one_plus_dt_A = 1.0 + delta_t*array_A[r]*A0
@@ -299,7 +323,7 @@ def run_calculation_volume(z1 = 3.0 , d_sphere = 5.0, averStartSize = 23.7, alte
                 'time' : t*delta_t*t0/60,
                 'mean': diam_temp,
                 'sizes': [r_array,list(f[t+1])],
-                'mass': corrected_mass * pow(10,18)
+                'mass': corrected_mass if normalize_enabled else corrected_mass * pow(10,18)
             }
         output.append(
             stat_element

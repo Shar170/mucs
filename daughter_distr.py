@@ -135,13 +135,13 @@ def beta(i, k, delta_r,r_min, P=1.0):
     #vj is children
     vi = V(i,delta_r,r_min)
     vj = V(k,delta_r,r_min)
-    fbv = vi/vj
-    c= 3.0
-    m = 0.0013
+    fbv = vi/vj #vi/vj
+    c= 1
+    m = 1#0.0013
     if debug:
         print(f'beta Vk = {vi}, Vi = {vj}, fbv = {fbv}')
     #sigma = vi/(c*m)
-    first = c*m * math.exp((-(fbv - 0.5)**2)  * ((c*m)**2)/2) / math.sqrt(2*math.pi) if vi>vj else 0
+    first = c*m * math.exp((-(fbv - 0.5)**2)  * ((c*m)**2)/2) / math.sqrt(2*math.pi)# if vi>vj else 0
     return first
 
 def normal_density(x, mean, std):

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # Функция для логирования начальных параметров
 
-def log_initialization(log_folder, L, P, z1, z2, timestamp, filename="calculation_log.md"):
+def log_initialization(log_folder, L, P, params, timestamp, filename="calculation_log.md"):
     return
     filepath = os.path.join(log_folder, filename)
     with open(filepath, "a") as f:
