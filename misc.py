@@ -9,6 +9,14 @@ if not os.path.exists(def_directory):
 
 class ControllingParameter:
     def __init__(self, name, column_name, default_value, min_value, max_value, unit):
+        """
+        name - имя параметра
+        column_name - имя колонки в которой хранится значение в датасете
+        default_value - стандартное значение параметра
+        min_value - минимальное значение параметра
+        max_value - максимальное значение параметра
+        unit - единица измерения параметра
+        """
         self.name = name
         self.column_name = column_name
         self.default_value = default_value
@@ -56,11 +64,39 @@ class VariableStorage:
             self.parameters[index] = parameter
         else:
             raise IndexError("Index out of range for parameters.")
-
+    def validate(self, colunms):
+        """
+        colunms - список имен колонок в датасете
+        """
+        if len(colunms) != self.num_parameters:
+            st.error(f"Количество колонок в датасете ({len(colunms)}) не соответствует количеству параметров в хранилище ({self.num_parameters}).")
+            return False
+        
+        for param in self.parameters:
+            if not param.column_name in colunms:
+                st.error(f"Колонка '{param.column_name}' не найдена в датасете ({colunms}).")
+                return False
+        return True
+        
     def save(self):
         with open(os.path.join(def_directory, self.name + '.pkl'), 'wb') as f:
             pickle.dump(self, f)
-
+    
+    def get_value_by_name(self, name):
+        """
+        name - имя колонки в которой хранится значение в датасете
+        """
+        for param in self.parameters:
+            if param.column_name == name:
+                return param.default_value
+        return None
+    def get_sorted_values(self, colunms_order):
+        """
+        colunms_order - список имен колонок в порядке сортировки
+        """
+        return [self.get_value_by_name(name) for name in colunms_order]
+    
+       
     @classmethod
     def load(cls, name):
         if not name.endswith('.pkl'):
